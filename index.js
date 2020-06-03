@@ -2,19 +2,32 @@ const express = require('express');
 const app = express();
 const connection = require('./database/database')
 const bodyParser = require('body-parser')
-
+const session = require('express-session')
 
 const articlesController = require('./articles/ArticlesController');
 const categoriesController = require('./categories/CategoriesController');
+const usersController = require('./user/UserController');
 
 const Article = require('./articles/Articles');
 const Category = require('./categories/Category')
+const User = require('./user/User')
 
+app.use('/',usersController);
 app.use('/',categoriesController);
 app.use('/',articlesController);
 
 //View engine
 app.set('view engine','ejs')
+
+
+//Sessions
+app.use(session({
+    secret: "segredo",
+    cookie: {
+        maxAge: 30000
+    }
+}));
+
 
 // Static
 app.use(express.static('public'));
@@ -37,7 +50,8 @@ app.get('/',(req,res)=>{
     Article.findAll({
         order:[
             ['id','DESC']
-        ]
+        ],
+        limit: 1
     }).then(article =>{ 
         Category.findAll().then((categories)=>{
         res.render('index',{article:article, categories: categories})
@@ -73,9 +87,11 @@ app.get('/category/:slug',(req,res)=>{
         include:[{model: Article}]
     }).then(category =>{
         if (category != undefined){
-
+            Category.findAll().then(categories =>{
+                res.render("index",{article:category.articles, categories: categories})
+            });
         }else{
-
+            res.redirect("/");
         }
     }).catch(error =>{
         res.redirect('/')
